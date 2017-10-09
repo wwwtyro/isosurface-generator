@@ -1,0 +1,160 @@
+"use strict";
+
+const unitCube = {
+  points: [
+    [0, 0, 0],
+    [1, 0, 0],
+    [0, 1, 0],
+    [1, 1, 0],
+    [0, 0, 1],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 1],
+  ],
+  edges: [
+    [0, 1],
+    [0, 2],
+    [0, 4],
+    [1, 3],
+    [1, 5],
+    [2, 3],
+    [2, 6],
+    [3, 7],
+    [4, 5],
+    [4, 6],
+    [5, 7],
+    [6, 7],
+  ],
+};
+
+function* isosurfaceGenerator(density, width, height, depth, level) {
+
+  const featurePoints = {};
+
+  function getFeaturePoint(x, y, z) {
+    if ([x,y,z] in featurePoints) return featurePoints[[x,y,z]];
+    const values = [];
+    unitCube.points.forEach(function(v) {
+      values.push(density.get(x + v[0], y + v[1], z + v[2]))
+    });
+    let p = [0,0,0];
+    let sum = 0;
+    unitCube.edges.forEach(function(e) {
+      // if the surface doesn't pass through this edge, skip it
+      if (values[e[0]] < level && values[e[1]] < level) return;
+      if (values[e[0]] >= level && values[e[1]] >= level) return;
+      // Calculate the rate of change of the density along this edge.
+      const dv = values[e[1]] - values[e[0]];
+      // Figure out how far along this edge the surface lies (linear approximation).
+      const dr = (level - values[e[0]]) / dv;
+      // Figure out the direction of this edge.
+      const r = [
+        unitCube.points[e[1]][0] - unitCube.points[e[0]][0],
+        unitCube.points[e[1]][1] - unitCube.points[e[0]][1],
+        unitCube.points[e[1]][2] - unitCube.points[e[0]][2],
+      ];
+      // Figure out the point that the surface intersects this edge.
+      const interp = [
+        unitCube.points[e[0]][0] + r[0] * dr,
+        unitCube.points[e[0]][1] + r[1] * dr,
+        unitCube.points[e[0]][2] + r[2] * dr,
+      ];
+      // Add this intersection to the sum of intersections.
+      p = [p[0] + interp[0] + x, p[1] + interp[1] + y, p[2] + interp[2] + z];
+      // Increment the edge intersection count for later averaging.
+      sum++;
+    });
+    featurePoints[[x,y,z]] = {x: x, y: y, z: z, point: [p[0]/sum, p[1]/sum, p[2]/sum]};
+    return featurePoints[[x,y,z]];
+  }
+
+  const total = (width - 1) * (height - 1) * (depth - 1);
+  let count = 0;
+
+  for (let x = 0; x < width - 1; x++) {
+    for (let y = 0; y < height - 1; y++) {
+      for (let z = 0; z < depth - 1; z++) {
+        const vertices = [];
+        const p0 = density.get(x + 0, y + 0, z + 0) >= level ? 1 : 0;
+        const px = density.get(x + 1, y + 0, z + 0) >= level ? 1 : 0;
+        const py = density.get(x + 0, y + 1, z + 0) >= level ? 1 : 0;
+        const pz = density.get(x + 0, y + 0, z + 1) >= level ? 1 : 0;
+        if (p0 + px === 1 && y > 0 && z > 0) {
+          const a = getFeaturePoint(x + 0, y - 1, z - 1).point;
+          const b = getFeaturePoint(x + 0, y - 1, z + 0).point;
+          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
+          const d = getFeaturePoint(x + 0, y + 0, z - 1).point;
+          if (px > p0) {
+            vertices.push(a.slice());
+            vertices.push(b.slice());
+            vertices.push(c.slice());
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(d.slice());
+          }
+          else {
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(b.slice());
+            vertices.push(a.slice());
+            vertices.push(d.slice());
+            vertices.push(c.slice());
+          }
+        }
+        if (p0 + py === 1 && x > 0 && z > 0) {
+          const a = getFeaturePoint(x - 1, y + 0, z - 1).point;
+          const b = getFeaturePoint(x + 0, y + 0, z - 1).point;
+          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
+          const d = getFeaturePoint(x - 1, y + 0, z + 0).point;
+          if (py > p0) {
+            vertices.push(a.slice());
+            vertices.push(b.slice());
+            vertices.push(c.slice());
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(d.slice());
+          }
+          else {
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(b.slice());
+            vertices.push(a.slice());
+            vertices.push(d.slice());
+            vertices.push(c.slice());
+          }
+        }
+        if (p0 + pz === 1 && x > 0 && y > 0) {
+          const a = getFeaturePoint(x - 1, y - 1, z + 0).point;
+          const b = getFeaturePoint(x + 0, y - 1, z + 0).point;
+          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
+          const d = getFeaturePoint(x - 1, y + 0, z + 0).point;
+          if (pz < p0) {
+            vertices.push(a.slice());
+            vertices.push(b.slice());
+            vertices.push(c.slice());
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(d.slice());
+          }
+          else {
+            vertices.push(a.slice());
+            vertices.push(c.slice());
+            vertices.push(b.slice());
+            vertices.push(a.slice());
+            vertices.push(d.slice());
+            vertices.push(c.slice());
+          }
+        }
+        count++;
+        yield {
+          vertices: vertices,
+          fraction: count/total,
+        };
+      }
+    }
+  }
+
+
+}
+
+module.exports = isosurfaceGenerator;
