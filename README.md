@@ -70,3 +70,7 @@ generator.next();
 //   done: false
 // }
 ```
+
+## Resources
+
+- https://0fps.net/2012/07/12/smooth-voxel-terrain-part-2
