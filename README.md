@@ -10,7 +10,7 @@ responsive.
   <img src="screenshot.png">
 </p>
 
-## install
+## Install
 
 ```sh
 npm install isosurface-generator
