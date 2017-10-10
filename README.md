@@ -10,6 +10,12 @@ responsive.
   <img src="screenshot.png">
 </p>
 
+## install
+
+```sh
+npm install isosurface-generator
+```
+
 ## Example
 
 ```js
