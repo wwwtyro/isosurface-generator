@@ -1,12 +1,14 @@
 {
   "name": "isosurface-generator",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "isosurface generator",
   "main": "index.js",
   "scripts": {
     "start": "cd example && budo -H 0.0.0.0 main.js:bundle.js --live"
   },
-  "keywords": ["isosurface"],
+  "keywords": [
+    "isosurface"
+  ],
   "author": {
     "name": "Rye Terrell",
     "email": "wwwtyro@gmail.com",
@@ -16,9 +18,15 @@
   "dependencies": {},
   "devDependencies": {
     "budo": "^10.0.4",
+    "geo-center": "^1.0.2",
     "gl-matrix": "^2.4.0",
     "ndarray": "^1.0.18",
+    "normals": "^1.1.0",
     "regl": "^1.3.0",
     "trackball-controller": "^1.1.1"
-  }
+  },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/wwwtyro/isosurface-generator"
+  }  
 }

@@ -1,7 +1,7 @@
 # isosurface-generator
 
-A JS generator function that returns a list of vertices describing an isosuface given a density and level. Since it's
-a generator function, you can perform this expensive calculation in such a way that allows you to keep your UI
+A JS generator function that returns a mesh describing an isosuface given a density and level. Since it's
+a generator function, you can perform this expensive calculation in a way that allows you to keep your UI
 responsive.
 
 [DEMO](https://wwwtyro.github.io/isosurface-generator)
@@ -35,9 +35,13 @@ for (let i = 0; i < 1000; i++) {
   );
 }
 
-const mesh = [];
-for (let data of isosurfaceGenerator(density, size, size, size, 0.5)) {
-  mesh.push.apply(mesh, data.vertices);
+let mesh;
+
+for (let data of isosurfaceGenerator(density, 0.5)) {
+  mesh = {
+    positions: data.positions,
+    cells: data.cells,
+  };
   console.log('Fraction complete:', data.fraction);
   // await display update
 }
@@ -45,23 +49,17 @@ for (let data of isosurfaceGenerator(density, size, size, size, 0.5)) {
 
 ## API
 
-### require('isosurface-generator')(density, width, height, depth, level)
+### require('isosurface-generator')(density, level)
 
 #### Parameters
 
-`density` is an ndarray (or an object that implements ndarray's `.get` function)
-
-`width` is the width of `density`
-
-`height` is the height of `density`
-
-`depth` is the depth of `density`
+`density` is an [ndarray](https://github.com/scijs/ndarray) (or an object that implements ndarray's `.get` method and `.shape` attribute)
 
 `level` is the density value for which we're generating an isosurface
 
 #### Return value
 
-A generator function that will provide a list of vertices describing the isosurface mesh and the fraction complete:
+A generator function that will provide a mesh describing the isosurface mesh and the fraction complete:
 
 ```js
 const generator = isosurfaceGenerator(density, 0.5);
@@ -70,7 +68,8 @@ generator.next();
 
 // Returns {
 //   value: {
-//     vertices: [[1,2,3], [4,5,6], ...],
+//     positions: [[1,2,3], [4,5,6], ...],
+//     cells: [[1,2,3], [4,5,6], ...],
 //     fraction: 0.009
 //   },
 //   done: false

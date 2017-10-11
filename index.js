@@ -27,12 +27,19 @@ const unitCube = {
   ],
 };
 
-function* isosurfaceGenerator(density, width, height, depth, level) {
+function* isosurfaceGenerator(density, level) {
 
-  const featurePoints = {};
+  window.density = density;
 
-  function getFeaturePoint(x, y, z) {
-    if ([x,y,z] in featurePoints) return featurePoints[[x,y,z]];
+  const width  = density.shape[0];
+  const height = density.shape[1];
+  const depth  = density.shape[2];
+
+  const featurePoints = [];
+  const featurePointIndex = {};
+
+  function getFeaturePointIndex(x, y, z) {
+    if ([x,y,z] in featurePointIndex) return featurePointIndex[[x,y,z]];
     const values = [];
     unitCube.points.forEach(function(v) {
       values.push(density.get(x + v[0], y + v[1], z + v[2]))
@@ -64,90 +71,69 @@ function* isosurfaceGenerator(density, width, height, depth, level) {
       // Increment the edge intersection count for later averaging.
       sum++;
     });
-    featurePoints[[x,y,z]] = {x: x, y: y, z: z, point: [p[0]/sum, p[1]/sum, p[2]/sum]};
-    return featurePoints[[x,y,z]];
+    featurePoints.push([p[0]/sum, p[1]/sum, p[2]/sum]);
+    featurePointIndex[[x,y,z]] = featurePoints.length - 1;
+    return featurePointIndex[[x,y,z]];
   }
 
   const total = (width - 1) * (height - 1) * (depth - 1);
   let count = 0;
 
+  const cells = [];
+
   for (let x = 0; x < width - 1; x++) {
     for (let y = 0; y < height - 1; y++) {
       for (let z = 0; z < depth - 1; z++) {
-        const vertices = [];
         const p0 = density.get(x + 0, y + 0, z + 0) >= level ? 1 : 0;
         const px = density.get(x + 1, y + 0, z + 0) >= level ? 1 : 0;
         const py = density.get(x + 0, y + 1, z + 0) >= level ? 1 : 0;
         const pz = density.get(x + 0, y + 0, z + 1) >= level ? 1 : 0;
         if (p0 + px === 1 && y > 0 && z > 0) {
-          const a = getFeaturePoint(x + 0, y - 1, z - 1).point;
-          const b = getFeaturePoint(x + 0, y - 1, z + 0).point;
-          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
-          const d = getFeaturePoint(x + 0, y + 0, z - 1).point;
+          const a = getFeaturePointIndex(x + 0, y - 1, z - 1);
+          const b = getFeaturePointIndex(x + 0, y - 1, z + 0);
+          const c = getFeaturePointIndex(x + 0, y + 0, z + 0);
+          const d = getFeaturePointIndex(x + 0, y + 0, z - 1);
           if (px > p0) {
-            vertices.push(a.slice());
-            vertices.push(b.slice());
-            vertices.push(c.slice());
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(d.slice());
+            cells.push([a,b,c]);
+            cells.push([a,c,d]);
           }
           else {
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(b.slice());
-            vertices.push(a.slice());
-            vertices.push(d.slice());
-            vertices.push(c.slice());
+            cells.push([a,c,b]);
+            cells.push([a,d,c]);
           }
         }
         if (p0 + py === 1 && x > 0 && z > 0) {
-          const a = getFeaturePoint(x - 1, y + 0, z - 1).point;
-          const b = getFeaturePoint(x + 0, y + 0, z - 1).point;
-          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
-          const d = getFeaturePoint(x - 1, y + 0, z + 0).point;
+          const a = getFeaturePointIndex(x - 1, y + 0, z - 1);
+          const b = getFeaturePointIndex(x + 0, y + 0, z - 1);
+          const c = getFeaturePointIndex(x + 0, y + 0, z + 0);
+          const d = getFeaturePointIndex(x - 1, y + 0, z + 0);
           if (py > p0) {
-            vertices.push(a.slice());
-            vertices.push(b.slice());
-            vertices.push(c.slice());
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(d.slice());
+            cells.push([a,b,c]);
+            cells.push([a,c,d]);
           }
           else {
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(b.slice());
-            vertices.push(a.slice());
-            vertices.push(d.slice());
-            vertices.push(c.slice());
+            cells.push([a,c,b]);
+            cells.push([a,d,c]);
           }
         }
         if (p0 + pz === 1 && x > 0 && y > 0) {
-          const a = getFeaturePoint(x - 1, y - 1, z + 0).point;
-          const b = getFeaturePoint(x + 0, y - 1, z + 0).point;
-          const c = getFeaturePoint(x + 0, y + 0, z + 0).point;
-          const d = getFeaturePoint(x - 1, y + 0, z + 0).point;
+          const a = getFeaturePointIndex(x - 1, y - 1, z + 0);
+          const b = getFeaturePointIndex(x + 0, y - 1, z + 0);
+          const c = getFeaturePointIndex(x + 0, y + 0, z + 0);
+          const d = getFeaturePointIndex(x - 1, y + 0, z + 0);
           if (pz < p0) {
-            vertices.push(a.slice());
-            vertices.push(b.slice());
-            vertices.push(c.slice());
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(d.slice());
+            cells.push([a,b,c]);
+            cells.push([a,c,d]);
           }
           else {
-            vertices.push(a.slice());
-            vertices.push(c.slice());
-            vertices.push(b.slice());
-            vertices.push(a.slice());
-            vertices.push(d.slice());
-            vertices.push(c.slice());
+            cells.push([a,c,b]);
+            cells.push([a,d,c]);
           }
         }
         count++;
         yield {
-          vertices: vertices,
+          positions: featurePoints,
+          cells: cells,
           fraction: count/total,
         };
       }

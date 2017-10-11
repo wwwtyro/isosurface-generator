@@ -5,6 +5,8 @@ const Trackball = require('trackball-controller');
 const mat4 = require('gl-matrix').mat4;
 const vec3 = require('gl-matrix').vec3;
 const ndarray = require('ndarray');
+const center = require('geo-center');
+const vertexNormals = require('normals').vertexNormals;
 const isosurfaceGenerator = require('../index.js');
 
 
@@ -33,8 +35,11 @@ async function main() {
     density.set(x, y, z, 64);
   }
 
-  // Average out the density so that it is smoothed and merged.
+  // Indicate that we're about to smooth the density.
   document.getElementById('fraction-label').innerHTML = 'Smoothing density...'
+  await display();
+
+  // Average out the density so that it is smoothed and merged.
   for (let i = 0; i < 64; i++) {
     const densityTemp = ndarray(new Float32Array(size*size*size), [size,size,size]);
     for (let x = 1; x < size - 1; x++) {
@@ -57,20 +62,20 @@ async function main() {
     await display();
   }
 
-  // We'll add polygons from the isosurface generator to this array.
-  const mesh = [];
+  // We'll store the result of the isosurface generation in this object.
+  let mesh;
 
-  // Create the isosurface generator.
-  const generator = isosurfaceGenerator(density, size, size, size, cutoff);
-
-  // Generate the isosurface without locking up the UI. First, grab the current time.
+  // Grab the current time.
   let t0 = performance.now();
 
-  // Iterate over the isosurface generator and store the generated vertices.
+  // Indicate that we're going to generate the isosurface now.
   document.getElementById('fraction-label').innerHTML = 'Generating isosurface...'
-  for (let data of generator) {
-    // Save the vertices in our array.
-    mesh.push.apply(mesh, data.vertices);
+  await display();
+
+  // Iterate over the isosurface generator and store the generated mesh.
+  for (let data of isosurfaceGenerator(density, cutoff)) {
+    // Save the data in our mesh.
+    mesh = {positions: data.positions, cells: data.cells};
     // If more than 100ms has passed, update the progress indicator and wait for the display to update.
     if (performance.now() - t0 > 100) {
       document.getElementById('fraction').style.width = 100 * data.fraction + '%';
@@ -79,32 +84,25 @@ async function main() {
     }
   }
 
-  // All done, so hide the progress indicator.
-  document.getElementById('fraction').style.display = 'none';
-  document.getElementById('fraction-label').style.display = 'none';
+  // Indicate that we're going to center the mesh.
+  document.getElementById('fraction-label').innerHTML = 'Centering Mesh...'
+  await display();
 
   // Center the resulting mesh on the origin.
-  for (let i = 0; i < mesh.length; i++) {
-    mesh[i][0] -= (size-1)/2;
-    mesh[i][1] -= (size-1)/2;
-    mesh[i][2] -= (size-1)/2;
-  }
+  mesh.positions = center(mesh.positions);
 
-  // Calculate normals for each vertex.
-  const normals = [];
-  for (let i = 0; i < mesh.length/3; i++) {
-    const q = i * 3;
-    const v0 = mesh[q + 0];
-    const v1 = mesh[q + 1];
-    const v2 = mesh[q + 2];
-    const v0v1 = vec3.sub([], v1, v0);
-    const v0v2 = vec3.sub([], v2, v0);
-    const n = vec3.cross([], v0v1, v0v2);
-    vec3.normalize(n, n);
-    normals.push(n);
-    normals.push(n);
-    normals.push(n);
-  }
+  // Indicate that we're going to calculate the mesh normals.
+  document.getElementById('fraction-label').innerHTML = 'Calculating mesh normals...'
+  await display();
+
+  // Calculate the normals.
+  const normals = vertexNormals(mesh.cells, mesh.positions);
+
+  // All done, so hide the progress indicator.
+  document.getElementById('fraction').style.display = 'none';
+
+  // Give some instructions.
+  document.getElementById('fraction-label').innerHTML = 'Click and drag with your mouse to rotate the isosurface.'
 
   // Grab our canvas.
   const canvas = document.getElementById('render-canvas');
@@ -138,7 +136,7 @@ async function main() {
       }
     `,
     attributes: {
-      position: mesh,
+      position: mesh.positions,
       normal: normals,
     },
     uniforms: {
@@ -151,7 +149,7 @@ async function main() {
       enable: true,
       face: 'back'
     },
-    count: mesh.length
+    elements: mesh.cells,
   });
 
   // Create a trackball controller for our scene.
