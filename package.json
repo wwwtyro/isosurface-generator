@@ -14,7 +14,7 @@
     "email": "wwwtyro@gmail.com",
     "url": "http://wwwtyro.github.io"
   },
-  "license": "ISC",
+  "license": "Unlicense",
   "dependencies": {},
   "devDependencies": {
     "budo": "^10.0.4",
@@ -28,5 +28,5 @@
   "repository": {
     "type" : "git",
     "url" : "https://github.com/wwwtyro/isosurface-generator"
-  }  
+  }
 }
